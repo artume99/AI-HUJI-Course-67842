@@ -1,6 +1,11 @@
-from board import Board
+from collections import namedtuple
+
+import numpy
+
+from board import Board, Move
 from search import SearchProblem, ucs
 import util
+from typing import List
 
 
 class BlokusFillProblem(SearchProblem):
@@ -50,14 +55,15 @@ class BlokusFillProblem(SearchProblem):
         return len(actions)
 
 
-
 #####################################################
 # This portion is incomplete.  Time to write code!  #
 #####################################################
 class BlokusCornersProblem(SearchProblem):
     def __init__(self, board_w, board_h, piece_list, starting_point=(0, 0)):
-        self.expanded = 0
         "*** YOUR CODE HERE ***"
+        self.board = Board(board_w, board_h, 1, piece_list, starting_point)
+        self.expanded = 0
+        self.to_reach = [(0, 0), (board_w - 1, 0), (board_w - 1, board_h - 1), (0, board_h - 1)]
 
     def get_start_state(self):
         """
@@ -65,9 +71,9 @@ class BlokusCornersProblem(SearchProblem):
         """
         return self.board
 
-    def is_goal_state(self, state):
+    def is_goal_state(self, state: Board):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return all([state.get_position(pos[0], pos[1]) != -1 for pos in self.to_reach])
 
     def get_successors(self, state):
         """
@@ -83,7 +89,7 @@ class BlokusCornersProblem(SearchProblem):
         self.expanded = self.expanded + 1
         return [(state.do_move(0, move), move, move.piece.get_num_tiles()) for move in state.get_legal_moves(0)]
 
-    def get_cost_of_actions(self, actions):
+    def get_cost_of_actions(self, actions: List[Move]):
         """
         actions: A list of actions to take
 
@@ -91,7 +97,10 @@ class BlokusCornersProblem(SearchProblem):
         be composed of legal moves
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        cost = lambda a: a.piece.get_num_tiles()
+        vfunc = numpy.vectorize(cost)
+        print(numpy.sum(vfunc(actions)))
+        return numpy.sum(vfunc(actions))
 
 
 def blokus_corners_heuristic(state, problem):
@@ -196,7 +205,6 @@ class ClosestLocationSearch:
         util.raiseNotDefined()
 
 
-
 class MiniContestSearch:
     """
     Implement your contest entry here
@@ -215,4 +223,3 @@ class MiniContestSearch:
     def solve(self):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
-

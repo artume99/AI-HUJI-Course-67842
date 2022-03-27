@@ -3,6 +3,7 @@ In search.py, you will implement generic search algorithms
 """
 
 import util
+from typing import List, Iterable
 
 
 class SearchProblem:
@@ -27,7 +28,7 @@ class SearchProblem:
         """
         util.raiseNotDefined()
 
-    def get_successors(self, state):
+    def get_successors(self, state) -> Iterable:
         """
         state: Search state
 
@@ -49,9 +50,45 @@ class SearchProblem:
         util.raiseNotDefined()
 
 
+class Node:
+    def __init__(self, state):
+        self.state = state
+        self.list_of_actions = []
+
+    def add_actions(self, actions):
+        self.list_of_actions.extend(actions)
+
+    def __eq__(self, other):
+        return self.state == other.state
+
+    def __hash__(self):
+        return hash(self.state)
 
 
-def depth_first_search(problem):
+def search_template(problem: SearchProblem, data_structure):
+    visited = set()
+    current_node = Node(problem.get_start_state())
+    data_structure.push(current_node)
+    while data_structure:
+        current_node: Node = data_structure.pop()
+
+        if problem.is_goal_state(current_node.state):
+            return current_node.list_of_actions
+
+        if current_node in visited:
+            continue
+
+        for state in problem.get_successors(current_node.state):
+            new_node = Node(state[0])
+            new_actions = current_node.list_of_actions.copy()
+            new_actions.append(state[1])
+            new_node.add_actions(new_actions)
+            data_structure.push(new_node)
+
+        visited.add(current_node)
+
+
+def depth_first_search(problem: SearchProblem):
     """
     Search the deepest nodes in the search tree first.
 
@@ -66,9 +103,7 @@ def depth_first_search(problem):
     print("Start's successors:", problem.get_successors(problem.get_start_state()))
     """
     "*** YOUR CODE HERE ***"
-    print("Start:", problem.get_start_state().state)
-    print("Is the start a goal?", problem.is_goal_state(problem.get_start_state()))
-    print("Start's successors:", problem.get_successors(problem.get_start_state())[0][0])
+    return search_template(problem, util.Stack())
 
 
 def breadth_first_search(problem):
@@ -76,7 +111,7 @@ def breadth_first_search(problem):
     Search the shallowest nodes in the search tree first.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return search_template(problem, util.Queue())
 
 
 def uniform_cost_search(problem):
@@ -101,7 +136,6 @@ def a_star_search(problem, heuristic=null_heuristic):
     """
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
-
 
 
 # Abbreviations
