@@ -53,6 +53,7 @@ class SearchProblem:
 class Node:
     def __init__(self, state):
         self.state = state
+        self.cost = 0
         self.list_of_actions = []
 
     def add_actions(self, actions):
@@ -83,6 +84,7 @@ def search_template(problem: SearchProblem, data_structure):
             new_actions = current_node.list_of_actions.copy()
             new_actions.append(state[1])
             new_node.add_actions(new_actions)
+            new_node.cost = current_node.cost + state[2]
             data_structure.push(new_node)
 
         visited.add(current_node)
@@ -106,7 +108,7 @@ def depth_first_search(problem: SearchProblem):
     return search_template(problem, util.Stack())
 
 
-def breadth_first_search(problem):
+def breadth_first_search(problem: SearchProblem):
     """
     Search the shallowest nodes in the search tree first.
     """
@@ -114,12 +116,17 @@ def breadth_first_search(problem):
     return search_template(problem, util.Queue())
 
 
-def uniform_cost_search(problem):
+def cost_of_node(node: Node):
+    return node.cost
+
+
+def uniform_cost_search(problem: SearchProblem):
     """
     Search the node of least total cost first.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    actions = search_template(problem, util.PriorityQueueWithFunction(cost_of_node))
+    return actions
 
 
 def null_heuristic(state, problem=None):
@@ -130,12 +137,20 @@ def null_heuristic(state, problem=None):
     return 0
 
 
+def cost_of_node_a_star(problem: SearchProblem, heuristic):
+    def cost(node: Node):
+        return node.cost + heuristic(node.state, problem)
+
+    return cost
+
+
 def a_star_search(problem, heuristic=null_heuristic):
     """
     Search the node that has the lowest combined cost and heuristic first.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    actions = search_template(problem, util.PriorityQueueWithFunction(cost_of_node_a_star(problem, heuristic)))
+    return actions
 
 
 # Abbreviations

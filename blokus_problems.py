@@ -1,9 +1,10 @@
 from collections import namedtuple
 
 import numpy
+import numpy as np
 
 from board import Board, Move
-from search import SearchProblem, ucs
+from search import SearchProblem, ucs, a_star_search, dfs
 import util
 from typing import List
 
@@ -63,7 +64,7 @@ class BlokusCornersProblem(SearchProblem):
         "*** YOUR CODE HERE ***"
         self.board = Board(board_w, board_h, 1, piece_list, starting_point)
         self.expanded = 0
-        self.to_reach = [(0, 0), (board_w - 1, 0), (board_w - 1, board_h - 1), (0, board_h - 1)]
+        self.targets = [(0, 0), (board_w - 1, 0), (board_w - 1, board_h - 1), (0, board_h - 1)]
 
     def get_start_state(self):
         """
@@ -73,7 +74,7 @@ class BlokusCornersProblem(SearchProblem):
 
     def is_goal_state(self, state: Board):
         "*** YOUR CODE HERE ***"
-        return all([state.get_position(pos[0], pos[1]) != -1 for pos in self.to_reach])
+        return all([state.get_position(pos[0], pos[1]) != -1 for pos in self.targets])
 
     def get_successors(self, state):
         """
@@ -97,13 +98,20 @@ class BlokusCornersProblem(SearchProblem):
         be composed of legal moves
         """
         "*** YOUR CODE HERE ***"
+        if not actions:
+            return 0
+        actionsp = np.array(actions)
         cost = lambda a: a.piece.get_num_tiles()
         vfunc = numpy.vectorize(cost)
-        print(numpy.sum(vfunc(actions)))
-        return numpy.sum(vfunc(actions))
+        return numpy.sum(vfunc(actionsp))
 
 
-def blokus_corners_heuristic(state, problem):
+def chebyshev_distance(xy1, xy2):
+    "Returns the chebyshev distance between points xy1 and xy2"
+    return max(abs(xy1[0] - xy2[0]), abs(xy1[1] - xy2[1]))
+
+
+def blokus_corners_heuristic(state: Board, problem: BlokusCornersProblem):
     """
     Your heuristic for the BlokusCornersProblem goes here.
 
@@ -116,13 +124,49 @@ def blokus_corners_heuristic(state, problem):
     inadmissible or inconsistent heuristics may find optimal solutions, so be careful.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    new_targets = [(t[1], t[0]) for t in problem.targets]
+    return blokus_heuristic_template(state, new_targets)
+
+
+def blokus_heuristic_template(state, to_reach: List):
+    min_reach = np.array([float('inf') for i in to_reach])
+    flags = [False for i in to_reach]
+    board = state.state
+    for xy, element in np.ndenumerate(board):
+        if element != -1:
+            distances = check_distances_from_points(xy, to_reach, flags)
+            min_reach = np.minimum(min_reach, distances)
+    for i, flag in enumerate(flags):
+        if flag and min_reach[i] != 0:  # Check for false alarm, if the goal is occupied everything is good
+            return float('inf')
+    return np.sum(min_reach)
+
+
+def check_distances_from_points(xy, points: List, flags) -> np.ndarray:
+    """
+    caclulates the distance between a point xy to all points
+    @param xy:
+    @param points:
+    @return: ndarray with the distance of the point from all the rest of the points
+    """
+    distances = []
+    for i, point in enumerate(points):
+        che_dist = chebyshev_distance(xy, point)
+        man_dist = util.manhattanDistance(xy, point)
+        if man_dist == 1:
+            flags[i] = True
+        distances.append(che_dist)
+    return np.array(distances)
 
 
 class BlokusCoverProblem(SearchProblem):
-    def __init__(self, board_w, board_h, piece_list, starting_point=(0, 0), targets=[(0, 0)]):
+    def __init__(self, board_w, board_h, piece_list, starting_point=(0, 0), targets=[(0, 0)], checks=[(0, 0)], index=0):
         self.targets = targets.copy()
         self.expanded = 0
+        self.starting_point = starting_point
+        self.board = Board(board_w, board_h, 1, piece_list, starting_point)
+        self.checks = checks
+        self.index = index
         "*** YOUR CODE HERE ***"
 
     def get_start_state(self):
@@ -133,7 +177,7 @@ class BlokusCoverProblem(SearchProblem):
 
     def is_goal_state(self, state):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return all([state.get_position(pos[1], pos[0]) != -1 for pos in self.targets])
 
     def get_successors(self, state):
         """
@@ -157,12 +201,48 @@ class BlokusCoverProblem(SearchProblem):
         be composed of legal moves
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if not actions:
+            return 0
+        cost = lambda a: a.piece.get_num_tiles()
+        vfunc = numpy.vectorize(cost)
+        return numpy.sum(vfunc(actions))
 
 
-def blokus_cover_heuristic(state, problem):
+def blokus_cover_heuristic(state: Board, problem: BlokusCoverProblem):
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return blokus_heuristic_template(state, problem.targets)
+
+
+def simplified_heuristic(state: Board, problem: BlokusCoverProblem):
+    checks = problem.checks
+    index = problem.index
+    flags = [False for i in checks]
+    min_reach = np.array([float('inf') for i in checks])
+    board = state.state
+    for xy, element in np.ndenumerate(board):
+        if element != -1:
+            distances = check_distances_from_points_simplified(xy, checks, flags)
+            min_reach = np.minimum(min_reach, distances)
+    for i, flag in enumerate(flags):
+        if flag and min_reach[i] != 0:  # Check for false alarm, if the goal is occupied everything is good
+            return float('inf')
+    return min_reach[index]
+
+
+def check_distances_from_points_simplified(xy, checks: List, flags) -> np.ndarray:
+    """
+    caclulates the distance between a point xy to all points
+    @param xy:
+    @param checks:
+    @return: ndarray with the distance of the point from all the rest of the points
+    """
+    distances = []
+    for i, point in enumerate(checks):
+        man_dist = util.manhattanDistance(xy, point)
+        if man_dist == 1:
+            flags[i] = True
+        distances.append(man_dist)
+    return np.array(distances)
 
 
 class ClosestLocationSearch:
@@ -173,7 +253,9 @@ class ClosestLocationSearch:
 
     def __init__(self, board_w, board_h, piece_list, starting_point=(0, 0), targets=(0, 0)):
         self.expanded = 0
-        self.targets = targets.copy()
+        self.targets = np.array(targets.copy())
+        self.board = Board(board_w, board_h, 1, piece_list, starting_point)
+        self.starting_point = starting_point
         "*** YOUR CODE HERE ***"
 
     def get_start_state(self):
@@ -181,6 +263,10 @@ class ClosestLocationSearch:
         Returns the start state for the search problem
         """
         return self.board
+
+    def closes_point(self):
+        closet_point = np.argmin(np.sum(np.abs(self.targets - np.array(self.starting_point)[None, :]), axis=1))
+        return self.targets[closet_point], closet_point
 
     def solve(self):
         """
@@ -202,7 +288,26 @@ class ClosestLocationSearch:
         return backtrace
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        current_state = self.board.__copy__()
+        backtrace = []
+        reached = [False for target in self.targets]
+        closest_point, index = self.closes_point()
+        problem = BlokusCoverProblem(current_state.board_w, current_state.board_h, current_state.piece_list,
+                                     self.starting_point, [closest_point], self.targets.tolist(), index)
+        while not all(reached):
+            actions = a_star_search(problem, simplified_heuristic)
+            reached[index] = True
+            backtrace.extend(actions)
+            self.starting_point = np.copy(self.targets[index])
+            self.targets[index] = np.array([-1000, -1000])
+            for move in actions:
+                current_state = current_state.do_move(0, move)
+            closest_point, index = self.closes_point()
+            problem.board = current_state
+            problem.targets = [closest_point]
+            problem.index = index
+        self.expanded = problem.expanded
+        return backtrace
 
 
 class MiniContestSearch:
