@@ -81,9 +81,8 @@ def search_template(problem: SearchProblem, data_structure):
 
         for state in problem.get_successors(current_node.state):
             new_node = Node(state[0])
-            new_actions = current_node.list_of_actions.copy()
-            new_actions.append(state[1])
-            new_node.add_actions(new_actions)
+            new_node.add_actions(current_node.list_of_actions)
+            new_node.add_actions([state[1]])
             new_node.cost = current_node.cost + state[2]
             data_structure.push(new_node)
 
@@ -154,8 +153,6 @@ def a_star_search(problem, heuristic=null_heuristic):
 
 
 # Abbreviations
-# if __name__ == '__main__':
-#     depth_first_search()
 bfs = breadth_first_search
 dfs = depth_first_search
 astar = a_star_search

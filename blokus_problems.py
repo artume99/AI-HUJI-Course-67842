@@ -125,11 +125,14 @@ def blokus_corners_heuristic(state: Board, problem: BlokusCornersProblem):
     """
     "*** YOUR CODE HERE ***"
     new_targets = [(t[1], t[0]) for t in problem.targets]
-    return blokus_heuristic_template(state, new_targets)
+    "If the board is square and all the pieces are valid pieces (from blokus game) \
+     then the sum to the corners is admissible "
+    return blokus_heuristic_template(state, new_targets, True)
 
 
-def blokus_heuristic_template(state, to_reach: List):
-    min_reach = np.array([float('inf') for i in to_reach])
+def blokus_heuristic_template(state, to_reach: List, corners: bool = False):
+    max_value = state.board_h * state.board_w
+    min_reach = np.array([max_value for i in to_reach])
     flags = [False for i in to_reach]
     board = state.state
     for xy, element in np.ndenumerate(board):
@@ -138,8 +141,16 @@ def blokus_heuristic_template(state, to_reach: List):
             min_reach = np.minimum(min_reach, distances)
     for i, flag in enumerate(flags):
         if flag and min_reach[i] != 0:  # Check for false alarm, if the goal is occupied everything is good
-            return float('inf')
-    return np.sum(min_reach)
+            return max_value
+
+    ## --- In the corners there might be max of 1 intercect (with valid pieces).
+    ## --- The minimum case that it would happen is with a distance if 4
+    if corners:
+        if state.board_h != state.board_w:
+            return np.max(min_reach)
+        res = np.sum(min_reach)
+        return res if res < 4 else res - 1
+    return np.max(min_reach)
 
 
 def check_distances_from_points(xy, points: List, flags) -> np.ndarray:
@@ -296,10 +307,12 @@ class ClosestLocationSearch:
                                      self.starting_point, [closest_point], self.targets.tolist(), index)
         while not all(reached):
             actions = a_star_search(problem, simplified_heuristic)
+            # actions = ucs(problem)
             reached[index] = True
             backtrace.extend(actions)
             self.starting_point = np.copy(self.targets[index])
-            self.targets[index] = np.array([-1000, -1000])
+            self.targets[index] = np.array(
+                [current_state.board_h * current_state.board_w, current_state.board_h * current_state.board_w])
             for move in actions:
                 current_state = current_state.do_move(0, move)
             closest_point, index = self.closes_point()
@@ -318,6 +331,10 @@ class MiniContestSearch:
     def __init__(self, board_w, board_h, piece_list, starting_point=(0, 0), targets=(0, 0)):
         self.targets = targets.copy()
         "*** YOUR CODE HERE ***"
+        self.expanded = 0
+        self.targets = np.array(targets.copy())
+        self.board = Board(board_w, board_h, 1, piece_list, starting_point)
+        self.starting_point = starting_point
 
     def get_start_state(self):
         """
@@ -325,6 +342,29 @@ class MiniContestSearch:
         """
         return self.board
 
+    def closes_point(self):
+        closet_point = np.argmin(np.sum(np.abs(self.targets - np.array(self.starting_point)[None, :]), axis=1))
+        return self.targets[closet_point], closet_point
+
     def solve(self):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        current_state = self.board.__copy__()
+        backtrace = []
+        reached = [False for target in self.targets]
+        closest_point, index = self.closes_point()
+        problem = BlokusCoverProblem(current_state.board_w, current_state.board_h, current_state.piece_list,
+                                     self.starting_point, [closest_point], self.targets.tolist(), index)
+        while not all(reached):
+            actions = a_star_search(problem, simplified_heuristic)
+            reached[index] = True
+            backtrace.extend(actions)
+            self.starting_point = np.copy(self.targets[index])
+            self.targets[index] = np.array([-1000, -1000])
+            for move in actions:
+                current_state = current_state.do_move(0, move)
+            closest_point, index = self.closes_point()
+            problem.board = current_state
+            problem.targets = [closest_point]
+            problem.index = index
+        self.expanded = problem.expanded
+        return backtrace
