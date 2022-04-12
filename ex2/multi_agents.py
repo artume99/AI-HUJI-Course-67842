@@ -1,7 +1,10 @@
 import numpy as np
 import abc
 import util
+from enum import Enum
 from game import Agent, Action
+from game_state import GameState
+from typing import Tuple
 
 
 class ReflexAgent(Agent):
@@ -14,7 +17,7 @@ class ReflexAgent(Agent):
     headers.
     """
 
-    def get_action(self, game_state):
+    def get_action(self, game_state: GameState):
         """
         You do not need to change this method, but you're welcome to.
 
@@ -36,7 +39,7 @@ class ReflexAgent(Agent):
 
         return legal_moves[chosen_index]
 
-    def evaluation_function(self, current_game_state, action):
+    def evaluation_function(self, current_game_state: GameState, action: Action):
         """
         Design a better evaluation function here.
 
@@ -50,13 +53,28 @@ class ReflexAgent(Agent):
         successor_game_state = current_game_state.generate_successor(action=action)
         board = successor_game_state.board
         max_tile = successor_game_state.max_tile
-        score = successor_game_state.score
+        # score = successor_game_state.score
+        score = 0
+        if action == Action.UP:
+            return 0
+        # region Check for descending order in the top left row (with max_tile at the left corner)
+        j = board.shape[0] - 1
+        prev_tile = board[j][0]
+        if board[j][0] == max_tile:
+            score += max_tile
+            for tile in board[j, 1:]:
+                if prev_tile < tile:
+                    break
+                score += tile
+                prev_tile = tile
+        score += np.array([(i + 1) * np.sum(board[i, :]) for i in
+                           range(board.shape[0])]).sum()  # Pyramid like - give more power for the upper rows
 
         "*** YOUR CODE HERE ***"
         return score
 
 
-def score_evaluation_function(current_game_state):
+def score_evaluation_function(current_game_state: GameState):
     """
     This default evaluation function just returns the score of the state.
     The score is the same one displayed in the GUI.
@@ -87,12 +105,17 @@ class MultiAgentSearchAgent(Agent):
         self.depth = depth
 
     @abc.abstractmethod
-    def get_action(self, game_state):
+    def get_action(self, game_state: GameState):
         return
 
 
+class Agent(Enum):
+    Player = 0
+    Computer = 1
+
+
 class MinmaxAgent(MultiAgentSearchAgent):
-    def get_action(self, game_state):
+    def get_action(self, game_state: GameState):
         """
         Returns the minimax action from the current gameState using self.depth
         and self.evaluationFunction.
@@ -110,8 +133,39 @@ class MinmaxAgent(MultiAgentSearchAgent):
             Returns the successor game state after an agent takes an action
         """
         """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        minimax = self.minimax(game_state, self.depth, Agent.Player)
+        return minimax[1]
 
+    def minimax(self, game_state: GameState, depth: int, agent: Agent) -> Tuple[int, Action]:
+        # region if 𝑑𝑒𝑝𝑡ℎ = 0 or v is a terminal node then return 𝑢(𝑣)
+        if depth == 0 or not game_state.get_legal_actions(0):
+            return self.evaluation_function(game_state), Action.STOP
+        # endregion
+
+        costume_key = lambda x: x[0]
+
+        # region  if isMaxNode then return max
+        if agent == Agent.Player:
+            legal_moves = game_state.get_legal_actions(agent.value)
+            max_val = (float("-inf"), Action.STOP)
+            for move in legal_moves:
+                new_state = game_state.generate_successor(agent.value, move)
+                response_val = self.minimax(new_state, depth - 1, Agent.Computer)[0], move
+                max_val = max(max_val, response_val, key=costume_key)
+            return max_val
+
+        # endregion
+
+        # region  if isMinNode then return min
+        if agent == Agent.Computer:
+            legal_moves = game_state.get_legal_actions(agent.value)
+            min_val = (float("inf"), Action.STOP)
+            for move in legal_moves:
+                new_state = game_state.generate_successor(agent.value, move)
+                response_val = self.minimax(new_state, depth, Agent.Player)[0], move
+                min_val = min(min_val, response_val, key=costume_key)
+            return min_val
+        # endregion
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -119,13 +173,51 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     Your minimax agent with alpha-beta pruning (question 3)
     """
 
-    def get_action(self, game_state):
+    def get_action(self, game_state: GameState):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        alpha_beta = self.alpha_beta(game_state, Agent.Player, self.depth)
+        print(alpha_beta)
+        return alpha_beta[1]
 
+    def alpha_beta(self, game_state: GameState, agent: Agent, depth: int, alpha=float("-inf"), beta=float("inf")) -> \
+            Tuple[int, Action]:
+        # region if 𝑑𝑒𝑝𝑡ℎ = 0 or v is a terminal node then return 𝑢(𝑣)
+        if depth == 0 or not game_state.get_legal_actions(0):
+            return self.evaluation_function(game_state), Action.STOP
+        # endregion
+
+        costume_key = lambda x: x[0]
+
+        # region if isMaxNode then a = max(𝛼, alpha_beta( 𝑠, 𝑑𝑒𝑝𝑡ℎ − 1, 𝛼, 𝛽, 𝑓𝑎𝑙𝑠𝑒)), prune if a>=b
+        if agent == Agent.Player:
+            legal_moves = game_state.get_legal_actions(agent.value)
+            return_alpha = (alpha, Action.STOP)
+            for move in legal_moves:
+                new_state = game_state.generate_successor(agent.value, move)
+                alpha = return_alpha[0]
+                response_val = self.alpha_beta(new_state, Agent.Computer, depth - 1, alpha, beta)[0], move
+                return_alpha = max(return_alpha, response_val, key=costume_key)
+                if return_alpha[0] >= beta:
+                    break
+            return return_alpha
+        # endregion
+
+        # region if isMinNode then b = min((𝛽, alpha_beta( 𝑠, 𝑑𝑒𝑝𝑡ℎ − 1, 𝛼, 𝛽, 𝑡𝑟𝑢𝑒))), prune if a>=b
+        if agent == Agent.Computer:
+            legal_moves = game_state.get_legal_actions(agent.value)
+            return_beta = (beta, Action.STOP)
+            for move in legal_moves:
+                new_state = game_state.generate_successor(agent.value, move)
+                beta = return_beta[0]
+                response_val = self.alpha_beta(new_state, Agent.Player, depth, alpha, beta)[0], move
+                return_beta = min(return_beta, response_val, key=costume_key)
+                if alpha >= return_beta[0]:
+                    break
+            return return_beta
+        # endregion
 
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
@@ -133,7 +225,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     Your expectimax agent (question 4)
     """
 
-    def get_action(self, game_state):
+    def get_action(self, game_state: GameState):
         """
         Returns the expectimax action using self.depth and self.evaluationFunction
 
@@ -142,9 +234,6 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
         """*** YOUR CODE HERE ***"""
         util.raiseNotDefined()
-
-
-
 
 
 def better_evaluation_function(current_game_state):

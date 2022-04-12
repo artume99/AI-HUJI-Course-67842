@@ -1,6 +1,9 @@
 import argparse
 import numpy
 import os
+
+import numpy as np
+
 import util
 from game import Game, RandomOpponentAgent
 from game_state import GameState
@@ -55,7 +58,8 @@ def create_agent(args):
 
 def main():
     parser = argparse.ArgumentParser(description='2048 game.')
-    parser.add_argument('--random_seed', help='The seed for the random state.', default=numpy.random.randint(100), type=int)
+    parser.add_argument('--random_seed', help='The seed for the random state.', default=numpy.random.randint(100),
+                        type=int)
     displays = ['GUI', 'SummaryDisplay']
     agents = ['KeyboardAgent', 'ReflexAgent', 'MinmaxAgent', 'AlphaBetaAgent', 'ExpectimaxAgent']
     parser.add_argument('--display', choices=displays, help='The game ui.', default=displays[0], type=str)
