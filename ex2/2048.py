@@ -97,5 +97,7 @@ def main():
 
 
 if __name__ == '__main__':
+    # x = np.array([5, 4, 3, 3])
+    # print(len(np.where((x[:-1] - x[1:]) == 0)[0]))
     main()
     input("Press Enter to continue...")

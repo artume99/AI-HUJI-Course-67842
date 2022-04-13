@@ -1,3 +1,6 @@
+import math
+from collections import namedtuple
+
 import numpy as np
 import abc
 import util
@@ -179,19 +182,18 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         """*** YOUR CODE HERE ***"""
         alpha_beta = self.alpha_beta(game_state, Agent.Player, self.depth)
-        print(alpha_beta)
         return alpha_beta[1]
 
     def alpha_beta(self, game_state: GameState, agent: Agent, depth: int, alpha=float("-inf"), beta=float("inf")) -> \
             Tuple[int, Action]:
-        # region if 𝑑𝑒𝑝𝑡ℎ = 0 or v is a terminal node then return 𝑢(𝑣)
+        # region End Condition
         if depth == 0 or not game_state.get_legal_actions(0):
             return self.evaluation_function(game_state), Action.STOP
         # endregion
 
         costume_key = lambda x: x[0]
 
-        # region if isMaxNode then a = max(𝛼, alpha_beta( 𝑠, 𝑑𝑒𝑝𝑡ℎ − 1, 𝛼, 𝛽, 𝑓𝑎𝑙𝑠𝑒)), prune if a>=b
+        # region alpha pruning
         if agent == Agent.Player:
             legal_moves = game_state.get_legal_actions(agent.value)
             return_alpha = (alpha, Action.STOP)
@@ -205,7 +207,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return return_alpha
         # endregion
 
-        # region if isMinNode then b = min((𝛽, alpha_beta( 𝑠, 𝑑𝑒𝑝𝑡ℎ − 1, 𝛼, 𝛽, 𝑡𝑟𝑢𝑒))), prune if a>=b
+        # region beta pruning
         if agent == Agent.Computer:
             legal_moves = game_state.get_legal_actions(agent.value)
             return_beta = (beta, Action.STOP)
@@ -233,18 +235,187 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         """*** YOUR CODE HERE ***"""
-        util.raiseNotDefined()
+        expectimax = self.expctimax(game_state, self.depth, Agent.Player)
+        return expectimax[1]
+
+    def expctimax(self, game_state: GameState, depth: int, agent: Agent):
+        # region End Condition
+        if depth == 0 or not game_state.get_legal_actions(0):
+            return self.evaluation_function(game_state), Action.STOP
+        # endregion
+
+        costume_key = lambda x: x[0]
+
+        # region Expected Max
+        if agent == Agent.Player:
+            legal_moves = game_state.get_legal_actions(agent.value)
+            max_val = (float("-inf"), Action.STOP)
+            for move in legal_moves:
+                new_state = game_state.generate_successor(agent.value, move)
+                response_val = self.expctimax(new_state, depth - 1, Agent.Computer)[0], move
+                max_val = max(max_val, response_val, key=costume_key)
+            return max_val
+
+        # endregion
+
+        # region Expected Min
+        if agent == Agent.Computer:
+            legal_moves = game_state.get_legal_actions(agent.value)
+            succesors = []
+            for move in legal_moves:
+                succesors.append(game_state.generate_successor(agent.value, move))
+            succesors = np.array(succesors)
+            probability_s = 1 / len(succesors)
+            vfunc_expectimax = np.vectorize(self.expctimax)
+            responses = vfunc_expectimax(succesors, depth, agent.Player)
+            expectation = np.sum(responses[0] * probability_s), Action.STOP
+            return expectation
+
+        # endregion
+        return
 
 
-def better_evaluation_function(current_game_state):
+def better_evaluation_function(current_game_state: GameState):
     """
     Your extreme 2048 evaluation function (question 5).
 
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    successor_game_state = current_game_state
+    board = successor_game_state.board
+    score = 0
+    max_tile = successor_game_state.max_tile
+    features = []
+    DEFAULT_WEIGHT = 10
+    Feature = namedtuple("Feature", "name weight")
+
+    # region Snake Board
+    snake = np.array([[1, 2, 4, 8], [128, 64, 32, 16], [256, 512, 1024, 2048], [32768, 16384, 8192, 4096]])
+    snake = snake / 1024
+    score += np.sum(board * snake)
+    # endregion
+
+    # region Edge Cases
+    moves = current_game_state.get_agent_legal_actions()
+    if len(moves) == 1 and moves[0] == Action.UP:
+        return float("-inf")
+    # endregion
+
+    # region Penalty for max block not being at the corner
+    j = board.shape[0] - 1
+    if board[j][0] != max_tile:
+        features.append(Feature(board[j][0], -1000))
+    # endregion
+
+    # region monotonic bottom row
+    num_of_descending_bottom_row = 0
+    prev_tile = board[j][0]
+    for tile in board[j, 1:]:
+        if prev_tile < tile:
+            break
+        num_of_descending_bottom_row += tile
+        prev_tile = tile
+
+    features.append(Feature(num_of_descending_bottom_row, 2))
+    # endregion
+
+    # region Empty tiles
+
+    empty_tiles = len(current_game_state.get_empty_tiles()[0])
+
+    features.append(Feature(empty_tiles, 2))
+    features.append(Feature(perfect_num_of_tiles_score(empty_tiles), 10))
+
+    # endregion
+
+    # region pyramid-like rows, best sum row should be at the bottom
+    row_sums = np.sum(board, axis=1)
+    for i, row in enumerate(row_sums):
+        features.append(Feature(row, i + 1))
+    # endregion
+
+    # region merge-ability of a certain board
+    ICKY_VAL = 4496
+    board = current_game_state.board
+    board_dim = board.shape[0]
+    adjacent_cols = np.abs(board[:, :board_dim - 1] - board[:, 1:])  # left to right
+    adjacent_rows = np.abs(board[:board_dim - 1, :] - board[1:, :])  # up to down
+    # the smaller the adjacents_sum - the better our situation 🙂
+    # todo: find a way to properly weight this sum.. This seems to work if our
+    #  sum is (1 <= sum <= 4496), it gives a number from 0 to 100, depending on
+    #  how close we are to a good matrix. Not perfect, but good enough
+    adjacent_rows = np.sum(adjacent_rows)
+    adjacent_cols = np.sum(adjacent_cols)
+    if adjacent_rows != 0:
+        ratio = (np.log(adjacent_rows) / np.log(ICKY_VAL))
+        features.append(Feature(ratio, 30))
+    if adjacent_cols != 0:
+        ratio = (np.log(adjacent_cols) / np.log(ICKY_VAL))
+        features.append(Feature(ratio, 10))
+
+
+    # endregion
+
+    row = board[j, 1:]
+    num_of_merges_max_tile = math.pow(2, math.log(max_tile, 2) - 1) - 1
+    two = np.ones(row.shape).astype(int) * 2
+    num_of_merges_row = np.sum(np.power(two, np.log2(row) - 1) - 1)
+    if (num_of_merges_max_tile - num_of_merges_row) > 0:
+        new = 1/math.ceil(num_of_merges_max_tile - num_of_merges_row)
+        features.append(Feature(new, 10))
+
+    for feature in features:
+        score += feature.name * feature.weight
+    return score
+
+
+def perfect_num_of_tiles_score(real_amount, min_amount=1, best_amount=7, max_amount=16):
+    ratio = 100 / (best_amount - min_amount)
+    if (real_amount <= best_amount):
+        return ratio * (real_amount - 1)
+    else:
+        rest = real_amount - best_amount
+        return 100 - (ratio / 2) * rest
+
+
+def test_evaluation(game_state: GameState):
+    successor_game_state = game_state
+    board = successor_game_state.board
+    score = 0
+    max_tile = successor_game_state.max_tile
+    # if max_tile != board[board.shape[0] - 1, 0]:
+    #     score -= 10000
+    for i, row in enumerate(board):
+        score += 1 * len(game_state.get_empty_tiles())
+        score += 10 * merges_in_row(row)
+        score -= 2 * min(num_of_monotonic(row), num_of_monotonic(row[::-1]))
+        score += 5 * np.sum(row)
+
+    board = board.T
+    for i, row in enumerate(board):
+        score += 1 * len(game_state.get_empty_tiles())
+        score += 10 * merges_in_row(row)
+        score -= 2 * min(num_of_monotonic(row), num_of_monotonic(row[::-1]))
+        score += 20 * np.sum(row)
+    return score
+
+
+def merges_in_row(row: np.ndarray):
+    return len(np.where((row[:-1] - row[1:]) == 0)[0])
+
+
+def num_of_monotonic(row: np.ndarray):
+    score = 0
+    prev_tile = row[0]
+    for tile in row[1:]:
+        if prev_tile < tile:
+            break
+        score += 1
+        prev_tile = tile
+    return score
 
 
 # Abbreviation
 better = better_evaluation_function
+# better = test_evaluation
