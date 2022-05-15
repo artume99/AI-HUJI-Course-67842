@@ -1,3 +1,5 @@
+import itertools
+
 from util import Pair
 from proposition_layer import PropositionLayer
 from plan_graph_level import PlanGraphLevel
@@ -221,7 +223,23 @@ class GraphPlan(object):
         return True
 
 
-def independent_pair(a1, a2):
+def inconsistent_effect(a1: Action, a2: Action):
+    for act1, act2 in itertools.permutations([a1, a2]):
+        for prop in act1.get_add():
+            if act2.is_neg_effect(prop):
+                return True
+    return False
+
+
+def interference(a1: Action, a2: Action):
+    for act1, act2 in itertools.permutations([a1, a2]):
+        for prop in act1.get_pre():
+            if act2.is_neg_effect(prop):
+                return True
+    return False
+
+
+def independent_pair(a1: Action, a2: Action):
     """
     Returns true if the actions are neither have inconsistent effects
     nor they interfere one with the other.
@@ -233,27 +251,27 @@ def independent_pair(a1, a2):
     a1.is_pos_effect(p) returns true is p is in a1.get_add()
     a1.is_neg_effect(p) returns true is p is in a1.get_delete()
     """
-    "*** YOUR CODE HERE ***"
+    return not inconsistent_effect(a1, a2) and not interference(a1, a2)
 
 
 if __name__ == '__main__':
     import sys
     import time
 
-    if len(sys.argv) != 1 and len(sys.argv) != 3:
-        print("Usage: graph_plan.py domain_name problem_name")
-        exit()
-    domain = 'dwrDomain.txt'
-    problem = 'dwrProblem.txt'
-    if len(sys.argv) == 3:
-        domain = str(sys.argv[1])
-        problem = str(sys.argv[2])
-
-    gp = GraphPlan(domain, problem)
-    start = time.clock()
-    plan = gp.graph_plan()
-    elapsed = time.clock() - start
-    if plan is not None:
-        print("Plan found with %d actions in %.2f seconds" % (len([act for act in plan if not act.is_noop()]), elapsed))
-    else:
-        print("Could not find a plan in %.2f seconds" % elapsed)
+    # if len(sys.argv) != 1 and len(sys.argv) != 3:
+    #     print("Usage: graph_plan.py domain_name problem_name")
+    #     exit()
+    # domain = 'dwrDomain.txt'
+    # problem = 'dwrProblem.txt'
+    # if len(sys.argv) == 3:
+    #     domain = str(sys.argv[1])
+    #     problem = str(sys.argv[2])
+    #
+    # gp = GraphPlan(domain, problem)
+    # start = time.clock()
+    # plan = gp.graph_plan()
+    # elapsed = time.clock() - start
+    # if plan is not None:
+    #     print("Plan found with %d actions in %.2f seconds" % (len([act for act in plan if not act.is_noop()]), elapsed))
+    # else:
+    #     print("Could not find a plan in %.2f seconds" % elapsed)

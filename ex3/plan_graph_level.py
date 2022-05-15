@@ -1,7 +1,11 @@
+import itertools
+
 from action_layer import ActionLayer
 from util import Pair
+from action import Action
 from proposition import Proposition
 from proposition_layer import PropositionLayer
+from typing import Set
 
 
 class PlanGraphLevel(object):
@@ -138,17 +142,20 @@ def mutex_actions(a1, a2, mutex_props):
     return have_competing_needs(a1, a2, mutex_props)
 
 
-def have_competing_needs(a1, a2, mutex_props):
+def have_competing_needs(a1: Action, a2: Action, mutex_props: Set[Pair]):
     """
     Complete code for deciding whether actions a1 and a2 have competing needs,
     given the mutex proposition from previous level (list of pairs of propositions).
     Hint: for propositions p  and q, the command  "Pair(p, q) in mutex_props"
           returns true if p and q are mutex in the previous level
     """
-    "*** YOUR CODE HERE ***"
+    for prop1, prop2 in itertools.product(a1.get_pre(), a2.get_pre()):
+        if Pair(prop1, prop2) in mutex_props:
+            return True
+    return False
 
 
-def mutex_propositions(prop1, prop2, mutex_actions_list):
+def mutex_propositions(prop1: Proposition, prop2: Proposition, mutex_actions_list: Set[Pair]):
     """
     complete code for deciding whether two propositions are mutex,
     given the mutex action from the current level (set of pairs of actions).
@@ -156,4 +163,7 @@ def mutex_propositions(prop1, prop2, mutex_actions_list):
     You might want to use this function:
     prop1.get_producers() returns the set of all the possible actions in the layer that have prop1 on their add list
     """
-    "*** YOUR CODE HERE ***"
+    for a1, a2 in itertools.product(prop1.get_producers(), prop2.get_producers()):
+        if Pair(a1, a2) not in mutex_actions_list:
+            return False
+    return False
