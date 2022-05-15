@@ -90,8 +90,12 @@ def main():
             initial_state = GameState(board=initial_board)
     game_runner = GameRunner(display=display, agent=agent, num_of_initial_tiles=args.num_of_initial_tiles,
                              sleep_between_actions=args.sleep_between_actions)
+    total_score = 0
     for i in range(args.num_of_games):
         score = game_runner.new_game(initial_state=initial_state)
+        total_score += score[0]
+        print(score)
+    print(total_score/args.num_of_games)
     if display is not None:
         display.print_stats()
 

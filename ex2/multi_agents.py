@@ -3,6 +3,9 @@ from collections import namedtuple
 
 import numpy as np
 import abc
+
+from numpy import int64
+
 import util
 from enum import Enum
 from game import Agent, Action
@@ -280,18 +283,26 @@ def better_evaluation_function(current_game_state: GameState):
     Your extreme 2048 evaluation function (question 5).
 
     DESCRIPTION: <write something here so we know what you did>
+    Our evaluation function consists of many ideas:
+        1. Keeping the lower left corner fixed in its place
+        2. Maintaining the form of our board as a "snake"
+        3. Making sure that there are enough "empty tiles" on the board
+        4. Prioritizing boards with bigger chances to merge with each move
     """
     "*** YOUR CODE HERE ***"
     successor_game_state = current_game_state
     board = successor_game_state.board
-    score = 0
+    score = np.int64(0)
     max_tile = successor_game_state.max_tile
     features = []
     DEFAULT_WEIGHT = 10
     Feature = namedtuple("Feature", "name weight")
+    board_sum = np.sum(board)
 
     # region Snake Board
-    snake = np.array([[1, 2, 4, 8], [128, 64, 32, 16], [256, 512, 1024, 2048], [32768, 16384, 8192, 4096]])
+    snake = np.array([[1, 2, 4, 8], [128, 64, 32, 16], [256, 512, 1024, 2048], [32768 * 4, 16384 * 4, 8192 * 4, 4096]])
+    if max_tile >= 2048:
+        snake = np.array([[8, 4, 2, 1], [128, 64, 32, 16], [2048, 1024, 512, 256], [32768 * 4, 16384 * 4, 8192 * 4, 4096]])
     snake = snake / 1024
     score += np.sum(board * snake)
     # endregion
@@ -305,7 +316,7 @@ def better_evaluation_function(current_game_state: GameState):
     # region Penalty for max block not being at the corner
     j = board.shape[0] - 1
     if board[j][0] != max_tile:
-        features.append(Feature(board[j][0], -1000))
+        features.append(Feature(board[j][0], -10000))
     # endregion
 
     # region monotonic bottom row
@@ -316,15 +327,13 @@ def better_evaluation_function(current_game_state: GameState):
             break
         num_of_descending_bottom_row += tile
         prev_tile = tile
-
-    features.append(Feature(num_of_descending_bottom_row, 2))
+    features.append(Feature(num_of_descending_bottom_row, 8))
     # endregion
 
     # region Empty tiles
 
     empty_tiles = len(current_game_state.get_empty_tiles()[0])
 
-    features.append(Feature(empty_tiles, 2))
     features.append(Feature(perfect_num_of_tiles_score(empty_tiles), 10))
 
     # endregion
@@ -332,7 +341,7 @@ def better_evaluation_function(current_game_state: GameState):
     # region pyramid-like rows, best sum row should be at the bottom
     row_sums = np.sum(board, axis=1)
     for i, row in enumerate(row_sums):
-        features.append(Feature(row, i + 1))
+        features.append(Feature(row, i + 15))
     # endregion
 
     # region merge-ability of a certain board
@@ -349,28 +358,32 @@ def better_evaluation_function(current_game_state: GameState):
     adjacent_cols = np.sum(adjacent_cols)
     if adjacent_rows != 0:
         ratio = (np.log(adjacent_rows) / np.log(ICKY_VAL))
-        features.append(Feature(ratio, 30))
+        features.append(Feature(ratio, 80))
     if adjacent_cols != 0:
         ratio = (np.log(adjacent_cols) / np.log(ICKY_VAL))
-        features.append(Feature(ratio, 10))
-
+        features.append(Feature(ratio, 25))
 
     # endregion
 
     row = board[j, 1:]
     num_of_merges_max_tile = math.pow(2, math.log(max_tile, 2) - 1) - 1
     two = np.ones(row.shape).astype(int) * 2
-    num_of_merges_row = np.sum(np.power(two, np.log2(row) - 1) - 1)
-    if (num_of_merges_max_tile - num_of_merges_row) > 0:
-        new = 1/math.ceil(num_of_merges_max_tile - num_of_merges_row)
-        features.append(Feature(new, 10))
+    if all(row > 0):
+        num_of_merges_row = np.sum(np.power(two, np.log2(row) - 1) - 1)
+        if (num_of_merges_max_tile - num_of_merges_row) > 0:
+            new = 1 / math.ceil(num_of_merges_max_tile - num_of_merges_row)
+            features.append(Feature(new, 7))
 
     for feature in features:
-        score += feature.name * feature.weight
+        i = np.int64(1)
+        i *= feature.name
+        i *= feature.weight
+        i *= board_sum
+        score += i
     return score
 
 
-def perfect_num_of_tiles_score(real_amount, min_amount=1, best_amount=7, max_amount=16):
+def perfect_num_of_tiles_score(real_amount, min_amount=1, best_amount=9):
     ratio = 100 / (best_amount - min_amount)
     if (real_amount <= best_amount):
         return ratio * (real_amount - 1)
@@ -379,43 +392,5 @@ def perfect_num_of_tiles_score(real_amount, min_amount=1, best_amount=7, max_amo
         return 100 - (ratio / 2) * rest
 
 
-def test_evaluation(game_state: GameState):
-    successor_game_state = game_state
-    board = successor_game_state.board
-    score = 0
-    max_tile = successor_game_state.max_tile
-    # if max_tile != board[board.shape[0] - 1, 0]:
-    #     score -= 10000
-    for i, row in enumerate(board):
-        score += 1 * len(game_state.get_empty_tiles())
-        score += 10 * merges_in_row(row)
-        score -= 2 * min(num_of_monotonic(row), num_of_monotonic(row[::-1]))
-        score += 5 * np.sum(row)
-
-    board = board.T
-    for i, row in enumerate(board):
-        score += 1 * len(game_state.get_empty_tiles())
-        score += 10 * merges_in_row(row)
-        score -= 2 * min(num_of_monotonic(row), num_of_monotonic(row[::-1]))
-        score += 20 * np.sum(row)
-    return score
-
-
-def merges_in_row(row: np.ndarray):
-    return len(np.where((row[:-1] - row[1:]) == 0)[0])
-
-
-def num_of_monotonic(row: np.ndarray):
-    score = 0
-    prev_tile = row[0]
-    for tile in row[1:]:
-        if prev_tile < tile:
-            break
-        score += 1
-        prev_tile = tile
-    return score
-
-
 # Abbreviation
 better = better_evaluation_function
-# better = test_evaluation
