@@ -48,7 +48,7 @@ class PlanGraphLevel(object):
     def set_action_layer(self, action_layer):  # sets the action layer
         self.action_layer = action_layer
 
-    def update_action_layer(self, previous_proposition_layer):
+    def update_action_layer(self, previous_proposition_layer: PropositionLayer):
         """
         Updates the action layer given the previous proposition layer (see proposition_layer.py)
         You should add an action to the layer if its preconditions are in the previous propositions layer,
@@ -61,10 +61,20 @@ class PlanGraphLevel(object):
         if all the preconditions of action are in the previous propositions layer
         self.actionLayer.addAction(action) adds action to the current action layer
         """
-        all_actions = PlanGraphLevel.actions
         "*** YOUR CODE HERE ***"
+        all_actions = PlanGraphLevel.actions
+        for action in all_actions:
+            all_precond_in_layer = previous_proposition_layer.all_preconds_in_layer(action)
+            pre_cond = action.get_pre()
+            is_pairwise_mutex = False
+            for prop1, prop2 in itertools.combinations(pre_cond, r=2):
+                if previous_proposition_layer.is_mutex(prop1, prop2):
+                    is_pairwise_mutex = True
+                    break
+            if all_precond_in_layer and not is_pairwise_mutex:
+                self.action_layer.add_action(action)
 
-    def update_mutex_actions(self, previous_layer_mutex_proposition):
+    def update_mutex_actions(self, previous_layer_mutex_proposition: Set[Pair]):
         """
         Updates the mutex set in self.action_layer,
         given the mutex proposition from the previous layer.
@@ -76,6 +86,9 @@ class PlanGraphLevel(object):
         """
         current_layer_actions = self.action_layer.get_actions()
         "*** YOUR CODE HERE ***"
+        for action1, action2 in itertools.combinations(current_layer_actions, r=2):
+            if mutex_actions(action1, action2, previous_layer_mutex_proposition):
+                self.action_layer.add_mutex_actions(action1, action2)
 
     def update_proposition_layer(self):
         """
@@ -166,4 +179,4 @@ def mutex_propositions(prop1: Proposition, prop2: Proposition, mutex_actions_lis
     for a1, a2 in itertools.product(prop1.get_producers(), prop2.get_producers()):
         if Pair(a1, a2) not in mutex_actions_list:
             return False
-    return False
+    return True

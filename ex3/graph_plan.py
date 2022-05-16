@@ -258,6 +258,9 @@ if __name__ == '__main__':
     import sys
     import time
 
+    lst = [2, 5, 6, 1]
+    for p1, p2 in itertools.combinations(lst, r=2):
+        print(p1, p2)
     # if len(sys.argv) != 1 and len(sys.argv) != 3:
     #     print("Usage: graph_plan.py domain_name problem_name")
     #     exit()
