@@ -4,6 +4,8 @@ from proposition_layer import PropositionLayer
 from plan_graph_level import PlanGraphLevel
 from pgparser import PgParser
 from action import Action
+from typing import FrozenSet
+from proposition import Proposition
 
 try:
     from search import SearchProblem
@@ -19,6 +21,8 @@ except:
 
 
 class PlanningProblem:
+    DEFAULT_ACTION_COST = 1
+
     def __init__(self, domain_file, problem_file):
         """
         Constructor
@@ -42,14 +46,16 @@ class PlanningProblem:
 
     def get_start_state(self):
         "*** YOUR CODE HERE ***"
+        return self.initialState
 
-    def is_goal_state(self, state):
+    def is_goal_state(self, state: FrozenSet[Proposition]):
         """
         Hint: you might want to take a look at goal_state_not_in_prop_payer function
         """
         "*** YOUR CODE HERE ***"
+        return not self.goal_state_not_in_prop_layer(state)
 
-    def get_successors(self, state):
+    def get_successors(self, state: FrozenSet[Proposition]):
         """
         For a given state, this should return a list of triples,
         (successor, action, step_cost), where 'successor' is a
@@ -64,9 +70,17 @@ class PlanningProblem:
         """
         self.expanded += 1
         "*** YOUR CODE HERE ***"
+        successors = []
+        for action in self.actions:
+            if action.is_noop():
+                continue
+            if action.all_preconds_in_list(state):
+                successor = state.union(action.get_add()).difference(action.get_delete())
+                successors.append((successor, action, self.DEFAULT_ACTION_COST))
+        return successors
 
     @staticmethod
-    def get_cost_of_actions( actions):
+    def get_cost_of_actions(actions):
         return len(actions)
 
     def goal_state_not_in_prop_layer(self, propositions):
@@ -94,7 +108,10 @@ class PlanningProblem:
             self.actions.append(act)
 
 
-def max_level(state, planning_problem):
+MAX_VALUE = float('inf')
+
+
+def max_level(state: FrozenSet[Proposition], planning_problem: PlanningProblem):
     """
     The heuristic value is the number of layers required to expand all goal propositions.
     If the goal is not reachable from the state your heuristic should return float('inf')
@@ -106,6 +123,23 @@ def max_level(state, planning_problem):
     pg_init.set_proposition_layer(prop_layer_init)   #update the new plan graph level with the the proposition layer
     """
     "*** YOUR CODE HERE ***"
+    level = 0
+    graph = []
+    prop_layer_init = PropositionLayer()  # create a new proposition layer
+    for prop in state:
+        prop_layer_init.add_proposition(prop)  # update the proposition layer with the propositions of the state
+    pg_init = PlanGraphLevel()  # create a new plan graph level (level is the action layer and the propositions layer)
+    pg_init.set_proposition_layer(prop_layer_init)  # update the new plan graph level with the proposition layer
+    graph.append(pg_init)
+    while not planning_problem.is_goal_state(graph[level].get_proposition_layer().get_propositions()):
+        if is_fixed(graph, level):
+            return MAX_VALUE
+        pg_next = PlanGraphLevel()
+        pg_next.expand_without_mutex(graph[level])
+        graph.append(pg_next)
+        level += 1
+    return level
+
 
 
 def level_sum(state, planning_problem):
@@ -155,9 +189,11 @@ if __name__ == '__main__':
             exit()
 
     prob = PlanningProblem(domain, problem)
-    start = time.clock()
+    # start = time.clock()
+    start = time.perf_counter()
     plan = a_star_search(prob, heuristic)
-    elapsed = time.clock() - start
+    # elapsed = time.clock() - start
+    elapsed = time.perf_counter() - start
     if plan is not None:
         print("Plan found with %d actions in %.2f seconds" % (len(plan), elapsed))
     else:
