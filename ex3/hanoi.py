@@ -40,11 +40,39 @@ def create_domain_file(domain_file_name, n_, m_):
     domain_file.close()
 
 
+def initial_state_template(initial_state):
+    initial_state_str = " ".join(initial_state)
+    return f'Initial state: {initial_state_str}\n'
+
+def goal_state_template(goal_state):
+    goal_state_str = " ".join(goal_state)
+    return f'Goal state: {goal_state_str}'
+
+
+def write_peg_state(disks, pegs, peg_index):
+    disks_on_disks = [f'{disk1}-{disk2}' for disk1, disk2 in itertools.combinations(disks, r=2)]
+    final_state = []
+    for dod in disks_on_disks:
+        d1, d2 = dod.split("-")
+        if int(d1[2]) == int(d2[2]) - 1:
+            final_state.append(dod)
+
+    peg = pegs[peg_index]
+    for disk in disks:
+        final_state.append(f'{disk}-{peg}')
+
+    return final_state
+
+
 def create_problem_file(problem_file_name_, n_, m_):
     disks = ['d_%s' % i for i in list(range(n_))]  # [d_0,..., d_(n_ - 1)]
     pegs = ['p_%s' % i for i in list(range(m_))]  # [p_0,..., p_(m_ - 1)]
     problem_file = open(problem_file_name_, 'w')  # use problem_file.write(str) to write to problem_file
     "*** YOUR CODE HERE ***"
+    initial_state = write_peg_state(disks, pegs, 0)
+    goal_state = write_peg_state(disks, pegs, m - 1)
+    problem_file.write(initial_state_template(initial_state))
+    problem_file.write(goal_state_template(goal_state))
 
     problem_file.close()
 
