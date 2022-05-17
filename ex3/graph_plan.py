@@ -258,23 +258,23 @@ if __name__ == '__main__':
     import sys
     import time
 
-    lst = [2, 5, 6, 1]
-    for p1, p2 in itertools.combinations(lst, r=2):
-        print(p1, p2)
-    # if len(sys.argv) != 1 and len(sys.argv) != 3:
-    #     print("Usage: graph_plan.py domain_name problem_name")
-    #     exit()
-    # domain = 'dwrDomain.txt'
-    # problem = 'dwrProblem.txt'
-    # if len(sys.argv) == 3:
-    #     domain = str(sys.argv[1])
-    #     problem = str(sys.argv[2])
-    #
-    # gp = GraphPlan(domain, problem)
+    if len(sys.argv) != 1 and len(sys.argv) != 3:
+        print("Usage: graph_plan.py domain_name problem_name")
+        exit()
+    domain = 'dwrDomain.txt'
+    problem = 'dwrProblem.txt'
+    if len(sys.argv) == 3:
+        domain = str(sys.argv[1])
+        problem = str(sys.argv[2])
+
+    gp = GraphPlan(domain, problem)
     # start = time.clock()
-    # plan = gp.graph_plan()
+    start = time.perf_counter()
+    plan = gp.graph_plan()
     # elapsed = time.clock() - start
-    # if plan is not None:
-    #     print("Plan found with %d actions in %.2f seconds" % (len([act for act in plan if not act.is_noop()]), elapsed))
-    # else:
-    #     print("Could not find a plan in %.2f seconds" % elapsed)
+    elapsed = time.perf_counter() - start
+
+    if plan is not None:
+        print("Plan found with %d actions in %.2f seconds" % (len([act for act in plan if not act.is_noop()]), elapsed))
+    else:
+        print("Could not find a plan in %.2f seconds" % elapsed)
