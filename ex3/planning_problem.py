@@ -141,13 +141,38 @@ def max_level(state: FrozenSet[Proposition], planning_problem: PlanningProblem):
     return level
 
 
-
-def level_sum(state, planning_problem):
+def level_sum(state: FrozenSet[Proposition], planning_problem: PlanningProblem):
     """
     The heuristic value is the sum of sub-goals level they first appeared.
     If the goal is not reachable from the state your heuristic should return float('inf')
     """
     "*** YOUR CODE HERE ***"
+    level = 0
+    sum_subgoals_lvl = 0
+    remaining_goals = set(planning_problem.goal)
+    graph = []
+    prop_layer_init = PropositionLayer()  # create a new proposition layer
+    for prop in state:
+        prop_layer_init.add_proposition(prop)  # update the proposition layer with the propositions of the state
+    pg_init = PlanGraphLevel()  # create a new plan graph level (level is the action layer and the propositions layer)
+    pg_init.set_proposition_layer(prop_layer_init)  # update the new plan graph level with the proposition layer
+    graph.append(pg_init)
+
+    while remaining_goals:
+        if is_fixed(graph, level):
+            return MAX_VALUE
+        props = graph[level].get_proposition_layer().get_propositions()
+        to_delete = set()
+        for goal in remaining_goals:
+            if goal in props:
+                sum_subgoals_lvl += level
+                to_delete.add(goal)
+        remaining_goals -= to_delete
+        pg_next = PlanGraphLevel()
+        pg_next.expand_without_mutex(graph[level])
+        graph.append(pg_next)
+        level += 1
+    return sum_subgoals_lvl
 
 
 def is_fixed(graph, level):
