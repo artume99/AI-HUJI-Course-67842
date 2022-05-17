@@ -4,7 +4,7 @@ import sys
 
 def proposition_string_template(propositions) -> str:
     propositions_str = " ".join(propositions)
-    return f'Propositions:\n{propositions_str}\n'
+    return propositions_str + '\n'
 
 
 def action_string_template(name, pre, add, delete) -> str:
@@ -17,26 +17,48 @@ def action_string_template(name, pre, add, delete) -> str:
            f'delete: {delete_str}\n'
 
 
+def move_action(file, disk, src, dest):
+    name = f'MOVE_{disk}_FROM_{src}_TO_{dest}'
+    pre = ['u' + disk, 'u' + dest, f'{disk}-{src}']
+    add = [f'{disk}-{dest}', f'u{src}']
+    delete = ['u' + dest, f'{disk}-{src}', ]
+    file.write(action_string_template(name, pre, add, delete))
+
+
+def write_actions(file, disks: list, pegs: list):
+    file.write("Actions:\n")
+    # move disk from disk to disk
+    for disk, disk1, disk2 in itertools.combinations(disks, r=3):
+        move_action(file, disk, disk1, disk2)
+        move_action(file, disk, disk2, disk1)
+    # move disk from peg to peg
+    for disk in disks:
+        for peg1, peg2 in itertools.combinations(pegs, r=2):
+            move_action(file, disk, peg1, peg2)
+            move_action(file, disk, peg2, peg1)
+    # move disk from peg to disk (and vice versa)
+    for m_disk in disks:
+        for disk, peg in itertools.product(disks, pegs):
+            move_action(file, m_disk, peg, disk)
+            move_action(file, m_disk, disk, peg)
+
+
+def write_propositions(file, disks, pegs):
+    file.write(f'Propositions:\n')
+    disks_on_pegs = [f'{disk}-{peg}' for disk, peg in itertools.product(disks, pegs)]
+    disks_on_disks = [f'{disk1}-{disk2}' for disk1, disk2 in itertools.combinations(disks, r=2)]
+    free_disks = ['u' + disk for disk in disks]
+    free_pegs = ['u' + peg for peg in pegs]
+    file.write(proposition_string_template(disks_on_pegs + disks_on_disks + free_disks + free_pegs))
+
+
 def create_domain_file(domain_file_name, n_, m_):
     disks = ['d_%s' % i for i in list(range(n_))]  # [d_0,..., d_(n_ - 1)]
     pegs = ['p_%s' % i for i in list(range(m_))]  # [p_0,..., p_(m_ - 1)]
-    disks_pegs = [f'{disk}-{peg}' for disk, peg in itertools.product(disks, pegs)]
-    free_disks = ['u' + disk for disk in disks]
-    free_pegs = ['u' + peg for peg in pegs]
-    disks_on_disks = [f'{disk1}ON{disk2}' for disk1, disk2 in itertools.combinations(disks, r=2)]
     domain_file = open(domain_file_name, 'w')  # use domain_file.write(str) to write to domain_file
     "*** YOUR CODE HERE ***"
-    domain_file.write(proposition_string_template(disks_pegs + disks_on_disks + free_disks + free_pegs))
-    domain_file.write("Actions:\n")
-    for disk_peg, peg in itertools.product(disks_pegs, pegs):
-        disk, curr_peg = disk_peg.split("-")
-        if curr_peg == peg:
-            continue
-        name = disk_peg + peg
-        pre = ["u" + disk, "u" + peg, disk_peg]
-        add = [f'{disk}-{peg}']
-        delete = [disk_peg, "u" + peg]
-        domain_file.write(action_string_template(name, pre, add, delete))
+    write_propositions(domain_file, disks, pegs)
+    write_actions(domain_file, disks, pegs)
     domain_file.close()
 
 
