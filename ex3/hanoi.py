@@ -39,6 +39,10 @@ def write_actions(file, disks: list, pegs: list):
     # move disk from peg to disk (and vice versa)
     for m_disk in disks:
         for disk, peg in itertools.product(disks, pegs):
+            n1 = int(m_disk.split("_")[1])
+            n2 = int(disk.split("_")[1])
+            if n1 >= n2:
+                continue
             move_action(file, m_disk, peg, disk)
             move_action(file, m_disk, disk, peg)
 
@@ -66,6 +70,7 @@ def initial_state_template(initial_state):
     initial_state_str = " ".join(initial_state)
     return f'Initial state: {initial_state_str}\n'
 
+
 def goal_state_template(goal_state):
     goal_state_str = " ".join(goal_state)
     return f'Goal state: {goal_state_str}'
@@ -76,14 +81,23 @@ def write_peg_state(disks, pegs, peg_index):
     final_state = []
     for dod in disks_on_disks:
         d1, d2 = dod.split("-")
-        if int(d1[2]) == int(d2[2]) - 1:
+        n1 = int(d1.split("_")[1])
+        n2 = int(d2.split("_")[1])
+        if n1 == n2 - 1:
             final_state.append(dod)
 
     peg = pegs[peg_index]
-    for disk in disks:
-        final_state.append(f'{disk}-{peg}')
+    disk = disks[-1]
+    final_state.append(f'{disk}-{peg}')
 
     return final_state
+
+
+def add_empty_pegs(pegs):
+    if len(pegs) == 1:
+        return []
+    free_pegs = ['u' + peg for peg in pegs[1:]]
+    return free_pegs
 
 
 def create_problem_file(problem_file_name_, n_, m_):
@@ -92,12 +106,13 @@ def create_problem_file(problem_file_name_, n_, m_):
     problem_file = open(problem_file_name_, 'w')  # use problem_file.write(str) to write to problem_file
     "*** YOUR CODE HERE ***"
     initial_state = write_peg_state(disks, pegs, 0)
+    initial_state += add_empty_pegs(pegs)
+    initial_state.append("ud_0")
     goal_state = write_peg_state(disks, pegs, m - 1)
     problem_file.write(initial_state_template(initial_state))
     problem_file.write(goal_state_template(goal_state))
 
     problem_file.close()
-
 
 if __name__ == '__main__':
     # if len(sys.argv) != 3:
