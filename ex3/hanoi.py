@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # n = int(float(sys.argv[1]))  # number of disks
     # m = int(float(sys.argv[2]))  # number of pegs
 
-    n = 3
+    n = 4
     m = 3
 
     domain_file_name = 'hanoi_%s_%s_domain.txt' % (n, m)
