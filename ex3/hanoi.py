@@ -114,16 +114,14 @@ def create_problem_file(problem_file_name_, n_, m_):
 
     problem_file.close()
 
+
 if __name__ == '__main__':
-    # if len(sys.argv) != 3:
-    #     print('Usage: hanoi.py n m')
-    #     sys.exit(2)
+    if len(sys.argv) != 3:
+        print('Usage: hanoi.py n m')
+        sys.exit(2)
 
-    # n = int(float(sys.argv[1]))  # number of disks
-    # m = int(float(sys.argv[2]))  # number of pegs
-
-    n = 4
-    m = 3
+    n = int(float(sys.argv[1]))  # number of disks
+    m = int(float(sys.argv[2]))  # number of pegs
 
     domain_file_name = 'hanoi_%s_%s_domain.txt' % (n, m)
     problem_file_name = 'hanoi_%s_%s_problem.txt' % (n, m)

@@ -268,11 +268,9 @@ if __name__ == '__main__':
         problem = str(sys.argv[2])
 
     gp = GraphPlan(domain, problem)
-    # start = time.clock()
-    start = time.perf_counter()
+    start = time.clock()
     plan = gp.graph_plan()
-    # elapsed = time.clock() - start
-    elapsed = time.perf_counter() - start
+    elapsed = time.clock() - start
 
     if plan is not None:
         print("Plan found with %d actions in %.2f seconds" % (len([act for act in plan if not act.is_noop()]), elapsed))
