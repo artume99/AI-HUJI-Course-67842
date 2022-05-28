@@ -214,11 +214,9 @@ if __name__ == '__main__':
             exit()
 
     prob = PlanningProblem(domain, problem)
-    # start = time.clock()
-    start = time.perf_counter()
+    start = time.clock()
     plan = a_star_search(prob, heuristic)
-    # elapsed = time.clock() - start
-    elapsed = time.perf_counter() - start
+    elapsed = time.clock() - start
     if plan is not None:
         print("Plan found with %d actions in %.2f seconds" % (len(plan), elapsed))
     else:

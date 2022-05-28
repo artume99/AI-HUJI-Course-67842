@@ -108,7 +108,7 @@ def create_problem_file(problem_file_name_, n_, m_):
     initial_state = write_peg_state(disks, pegs, 0)
     initial_state += add_empty_pegs(pegs)
     initial_state.append("ud_0")
-    goal_state = write_peg_state(disks, pegs, m - 1)
+    goal_state = write_peg_state(disks, pegs, m_ - 1)
     problem_file.write(initial_state_template(initial_state))
     problem_file.write(goal_state_template(goal_state))
 
@@ -116,15 +116,12 @@ def create_problem_file(problem_file_name_, n_, m_):
 
 
 if __name__ == '__main__':
-    # if len(sys.argv) != 3:
-    #     print('Usage: hanoi.py n m')
-    #     sys.exit(2)
+    if len(sys.argv) != 3:
+        print('Usage: hanoi.py n m')
+        sys.exit(2)
 
-    # n = int(float(sys.argv[1]))  # number of disks
-    # m = int(float(sys.argv[2]))  # number of pegs
-
-    n = 3
-    m = 3
+    n = int(float(sys.argv[1]))  # number of disks
+    m = int(float(sys.argv[2]))  # number of pegs
 
     domain_file_name = 'hanoi_%s_%s_domain.txt' % (n, m)
     problem_file_name = 'hanoi_%s_%s_problem.txt' % (n, m)
