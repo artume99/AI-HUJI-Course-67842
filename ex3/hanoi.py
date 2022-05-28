@@ -108,7 +108,7 @@ def create_problem_file(problem_file_name_, n_, m_):
     initial_state = write_peg_state(disks, pegs, 0)
     initial_state += add_empty_pegs(pegs)
     initial_state.append("ud_0")
-    goal_state = write_peg_state(disks, pegs, m - 1)
+    goal_state = write_peg_state(disks, pegs, m_ - 1)
     problem_file.write(initial_state_template(initial_state))
     problem_file.write(goal_state_template(goal_state))
 
