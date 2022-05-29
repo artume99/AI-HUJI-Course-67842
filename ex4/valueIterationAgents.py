@@ -62,8 +62,6 @@ class ValueIterationAgent(ValueEstimationAgent):
                     max_v = sum_v if sum_v > max_v else max_v
                 self.values[state] = reward + self.discount * max_v
 
-    # def q(self, state, action):
-
     def getValue(self, state):
         """
           Return the value of the state (computed in __init__).
@@ -100,8 +98,6 @@ class ValueIterationAgent(ValueEstimationAgent):
                     best_action = action
                     best_val = val
         return best_action
-
-
 
     def getAction(self, state):
         "Returns the policy at the state (no exploration)."
