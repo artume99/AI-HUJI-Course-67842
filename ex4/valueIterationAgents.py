@@ -44,10 +44,6 @@ class ValueIterationAgent(ValueEstimationAgent):
             previous_values = self.values.copy()
             self.value_iteration(previous_values)
 
-        print(self.values)
-
-        "*** YOUR CODE HERE ***"
-
     def value_iteration(self, prev_values):
         reward = 0
         for state in self.mdp.getStates():
@@ -92,11 +88,13 @@ class ValueIterationAgent(ValueEstimationAgent):
         best_action = None
         best_val = float("-inf")
         for action in self.mdp.getPossibleActions(state):
+            sum_val = 0
             for next_state, prob in self.mdp.getTransitionStatesAndProbs(state, action):
                 val = prob * self.values[next_state]
-                if best_val < val:
-                    best_action = action
-                    best_val = val
+                sum_val += val
+            if best_val < sum_val:
+                best_action = action
+                best_val = sum_val
         return best_action
 
     def getAction(self, state):
