@@ -48,7 +48,7 @@ class ValueIterationAgent(ValueEstimationAgent):
         reward = 0
         for state in self.mdp.getStates():
             if not self.mdp.isTerminal(state):
-                max_v = 0
+                max_v = float("-inf")
                 for action in self.mdp.getPossibleActions(state):
                     sum_v = 0
                     for next_state, prob in self.mdp.getTransitionStatesAndProbs(state, action):
