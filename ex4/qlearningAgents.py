@@ -161,8 +161,9 @@ class ApproximateQAgent(PacmanQAgent):
         PacmanQAgent.__init__(self, **args)
 
         # You might want to initialize weights here.
-        self.weights = Counter()
         "*** YOUR CODE HERE ***"
+        self.weights = Counter()
+
 
     def getQValue(self, state, action):
         """
